@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Backend virtual environment
+backend/.venv/
+backend/venv/
+
+# Backend environment variables
+backend/.env
+
+# Backend local storage
+backend/storage/uploads/
+backend/storage/chroma/
+backend/storage/documents/
+
+# Frontend dependencies
+frontend/node_modules/
+
+# Frontend build output
+frontend/.next/
+frontend/out/
+
+# Frontend environment variables
+frontend/.env.local
+frontend/.env*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
