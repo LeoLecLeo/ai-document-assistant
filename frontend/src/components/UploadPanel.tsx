@@ -1,3 +1,8 @@
+"use client";
+
+import { type DragEvent, useRef, useState } from "react";
+import { CheckCircle2, FileText, FileUp, RotateCcw, Upload } from "lucide-react";
+
 import type { UploadResponse } from "@/types/document";
 
 type UploadPanelProps = {
@@ -21,61 +26,143 @@ export function UploadPanel({
   onUpload,
   onReset,
 }: UploadPanelProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const isInteractionDisabled = isUploading || isDisabled;
+
+  function handleDragOver(event: DragEvent<HTMLButtonElement>) {
+    event.preventDefault();
+
+    if (isInteractionDisabled) {
+      return;
+    }
+
+    setIsDragging(true);
+  }
+
+  function handleDragLeave(event: DragEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    setIsDragging(false);
+  }
+
+  function handleDrop(event: DragEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    setIsDragging(false);
+
+    if (isInteractionDisabled) {
+      return;
+    }
+
+    const droppedFile = event.dataTransfer.files?.[0];
+
+    if (!droppedFile) {
+      return;
+    }
+
+    if (droppedFile.type !== "application/pdf") {
+      onFileChange(null);
+      return;
+    }
+
+    onFileChange(droppedFile);
+  }
+
   return (
-    <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
-      <h2 className="text-xl font-semibold">1. Upload du document</h2>
+    <section className="flex h-full flex-col rounded-2xl border border-border/80 bg-card/60 p-6 shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_24px_48px_-24px_rgba(0,0,0,0.6)] backdrop-blur-sm">
+      <div className="mb-5 flex items-center gap-3">
+        <div className="flex size-9 items-center justify-center rounded-lg border border-border bg-secondary/60 text-primary">
+          <FileUp className="size-4" aria-hidden="true" />
+        </div>
 
-      <input
-        key={fileInputKey}
-        type="file"
-        accept="application/pdf"
-        disabled={isUploading || isDisabled}
-        onChange={(event) => onFileChange(event.target.files?.[0] ?? null)}
-        className="mt-6 block w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-300 disabled:cursor-not-allowed disabled:opacity-60"
-      />
+        <div>
+          <h2 className="text-sm font-semibold tracking-tight text-foreground">
+            Ajouter un document
+          </h2>
+          <p className="text-xs text-muted-foreground">Document PDF</p>
+        </div>
+      </div>
 
-      {file && !uploadResult && (
-        <p className="mt-3 text-sm text-neutral-400">
-          Fichier sélectionné : <span className="text-white">{file.name}</span>
-        </p>
-      )}
+      <button
+        type="button"
+        disabled={isInteractionDisabled}
+        onClick={() => inputRef.current?.click()}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`group relative flex flex-1 cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed px-6 py-10 text-center transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+          isDragging
+            ? "border-primary/70 bg-primary/10"
+            : "border-border bg-background/40 hover:border-primary/50 hover:bg-secondary/30"
+        }`}
+        aria-label="Choisir ou déposer un fichier PDF"
+      >
+        <input
+          key={fileInputKey}
+          ref={inputRef}
+          type="file"
+          accept="application/pdf"
+          className="sr-only"
+          onChange={(event) => onFileChange(event.target.files?.[0] ?? null)}
+        />
 
-      <div className="mt-4 flex flex-wrap gap-3">
+        <div className="flex size-12 items-center justify-center rounded-full border border-border bg-secondary/60 text-muted-foreground transition-colors group-hover:text-primary">
+          <Upload className="size-5" aria-hidden="true" />
+        </div>
+
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-foreground">
+            {file ? file.name : "Dépose ton PDF ici ou clique pour parcourir"}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Le document sera analysé et indexé pour la recherche.
+          </p>
+        </div>
+      </button>
+
+      <div className="mt-5 flex flex-col gap-3 sm:flex-row">
         <button
           onClick={onUpload}
           disabled={isUploading || isDisabled || !file || Boolean(uploadResult)}
-          className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isUploading ? "Analyse en cours..." : "Uploader le PDF"}
+          <Upload className="size-4" aria-hidden="true" />
+          {isUploading ? "Analyse en cours..." : "Uploader et indexer"}
         </button>
 
         {(file || uploadResult) && (
           <button
             onClick={onReset}
             disabled={isUploading || isDisabled}
-            className="rounded-full border border-neutral-700 px-5 py-3 text-sm font-semibold text-white transition hover:border-neutral-400 hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border bg-transparent px-4 py-2.5 text-sm font-medium text-foreground transition hover:bg-secondary/60 disabled:cursor-not-allowed disabled:opacity-50"
           >
+            <RotateCcw className="size-4" aria-hidden="true" />
             Nouveau document
           </button>
         )}
       </div>
 
       {uploadResult && (
-        <div className="mt-6 rounded-2xl border border-green-500/20 bg-green-500/10 p-4 text-sm text-neutral-300">
-          <p className="mb-3 font-medium text-green-300">Document prêt</p>
+        <div className="mt-5 flex items-center gap-3 rounded-xl border border-primary/25 bg-primary/10 p-4">
+          <div className="flex size-9 items-center justify-center rounded-lg bg-primary/15 text-primary">
+            <FileText className="size-4" aria-hidden="true" />
+          </div>
 
-          <p>
-            <span className="text-white">Fichier :</span>{" "}
-            {uploadResult.filename}
-          </p>
-          <p>
-            <span className="text-white">Pages :</span> {uploadResult.pages}
-          </p>
-          <p>
-            <span className="text-white">Chunks :</span> {uploadResult.chunks}
-          </p>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-foreground">
+              {uploadResult.filename}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {uploadResult.pages} pages · {uploadResult.chunks} segments prêts
+            </p>
+          </div>
+
+          <span className="flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+            <CheckCircle2 className="size-3.5" aria-hidden="true" />
+            Prêt
+          </span>
         </div>
       )}
-    </div>
+    </section>
   );
 }

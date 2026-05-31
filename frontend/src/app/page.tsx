@@ -107,11 +107,16 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-neutral-950 px-6 py-10 text-white">
-      <div className="mx-auto max-w-5xl">
+    <main className="relative min-h-screen overflow-hidden bg-background">
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-120 bg-[radial-gradient(60%_100%_at_50%_0%,oklch(0.72_0.13_215/0.12),transparent_70%)]"
+        aria-hidden="true"
+      />
+
+      <div className="relative mx-auto w-full max-w-5xl px-6 py-16 sm:py-24">
         <PageHeader />
 
-        <section className="grid gap-6 md:grid-cols-2">
+        <div className="mt-14 grid gap-6 lg:grid-cols-2">
           <UploadPanel
             file={file}
             uploadResult={uploadResult}
@@ -131,13 +136,19 @@ export default function Home() {
             onQuestionChange={setQuestion}
             onAsk={handleAsk}
           />
-        </section>
+        </div>
 
-        <ErrorMessage message={error} />
+        <div className="mt-8">
+          <ErrorMessage message={error} />
+        </div>
 
-        <AnswerPanel answer={answer} isLoading={isAsking} />
+        <div className="mt-8">
+          <AnswerPanel answer={answer} isLoading={isAsking} />
+        </div>
 
-        <SourcesList sources={sources} />
+        <div className="mt-12">
+          <SourcesList sources={sources} />
+        </div>
       </div>
     </main>
   );

@@ -8,7 +8,7 @@ export function ErrorMessage({ message }: ErrorMessageProps) {
   }
 
   return (
-    <div className="mt-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
+    <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-foreground">
       {message}
     </div>
   );
