@@ -1,6 +1,6 @@
 "use client";
 
-import { type DragEvent, useRef, useState } from "react";
+import { type ChangeEvent, type DragEvent, useRef, useState } from "react";
 import { CheckCircle2, FileText, FileUp, RotateCcw, Upload } from "lucide-react";
 
 import type { UploadResponse } from "@/types/document";
@@ -12,7 +12,7 @@ type UploadPanelProps = {
   isDisabled: boolean;
   fileInputKey: number;
   onFileChange: (file: File | null) => void;
-  onUpload: () => void;
+  onUpload: (selectedFile?: File | null) => void;
   onReset: () => void;
 };
 
@@ -31,7 +31,27 @@ export function UploadPanel({
 
   const isInteractionDisabled = isUploading || isDisabled;
 
-  function handleDragOver(event: DragEvent<HTMLButtonElement>) {
+  function handleInputChange(event: ChangeEvent<HTMLInputElement>) {
+    const selectedFile = event.currentTarget.files?.item(0) ?? null;
+
+    if (!selectedFile) {
+      return;
+    }
+
+    onFileChange(selectedFile);
+  }
+
+  function getSelectedFileFromInput() {
+    return inputRef.current?.files?.item(0) ?? null;
+  }
+
+  function resetNativeInputValue() {
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
+  }
+
+  function handleDragOver(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
 
     if (isInteractionDisabled) {
@@ -41,12 +61,12 @@ export function UploadPanel({
     setIsDragging(true);
   }
 
-  function handleDragLeave(event: DragEvent<HTMLButtonElement>) {
+  function handleDragLeave(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
     setIsDragging(false);
   }
 
-  function handleDrop(event: DragEvent<HTMLButtonElement>) {
+  function handleDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
     setIsDragging(false);
 
@@ -54,17 +74,23 @@ export function UploadPanel({
       return;
     }
 
-    const droppedFile = event.dataTransfer.files?.[0];
+    const droppedFile = event.dataTransfer.files?.item(0);
 
     if (!droppedFile) {
       return;
     }
 
-    if (droppedFile.type !== "application/pdf") {
+    const isPdf =
+      droppedFile.type === "application/pdf" ||
+      droppedFile.name.toLowerCase().endsWith(".pdf");
+
+    if (!isPdf) {
+      resetNativeInputValue();
       onFileChange(null);
       return;
     }
 
+    resetNativeInputValue();
     onFileChange(droppedFile);
   }
 
@@ -83,47 +109,61 @@ export function UploadPanel({
         </div>
       </div>
 
-      <button
-        type="button"
-        disabled={isInteractionDisabled}
-        onClick={() => inputRef.current?.click()}
+      <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`group relative flex flex-1 cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed px-6 py-10 text-center transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-          isDragging
-            ? "border-primary/70 bg-primary/10"
-            : "border-border bg-background/40 hover:border-primary/50 hover:bg-secondary/30"
+        className={`group relative flex flex-1 flex-col items-center justify-center gap-4 rounded-xl border border-dashed px-6 py-10 text-center transition-colors ${
+          isInteractionDisabled
+            ? "cursor-not-allowed opacity-60"
+            : isDragging
+              ? "border-primary/70 bg-primary/10"
+              : "border-border bg-background/40 hover:border-primary/50 hover:bg-secondary/30"
         }`}
-        aria-label="Choisir ou déposer un fichier PDF"
       >
-        <input
-          key={fileInputKey}
-          ref={inputRef}
-          type="file"
-          accept="application/pdf"
-          className="sr-only"
-          onChange={(event) => onFileChange(event.target.files?.[0] ?? null)}
-        />
-
         <div className="flex size-12 items-center justify-center rounded-full border border-border bg-secondary/60 text-muted-foreground transition-colors group-hover:text-primary">
           <Upload className="size-5" aria-hidden="true" />
         </div>
 
         <div className="space-y-1">
           <p className="text-sm font-medium text-foreground">
-            {file ? file.name : "Dépose ton PDF ici ou clique pour parcourir"}
+            {file ? file.name : "Sélectionne un PDF à analyser"}
           </p>
           <p className="text-xs text-muted-foreground">
-            Le document sera analysé et indexé pour la recherche.
+            Sur ordinateur, tu peux aussi glisser-déposer ton fichier ici.
           </p>
         </div>
-      </button>
+
+        <label
+          className={`relative inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 ${
+            isInteractionDisabled
+              ? "cursor-not-allowed opacity-50"
+              : "cursor-pointer"
+          }`}
+        >
+          Choisir un fichier
+
+          <input
+            key={fileInputKey}
+            ref={inputRef}
+            type="file"
+            accept=".pdf,application/pdf"
+            disabled={isInteractionDisabled}
+            onClick={(event) => {
+              event.currentTarget.value = "";
+            }}
+            onChange={handleInputChange}
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+            aria-label="Choisir un fichier PDF"
+          />
+        </label>
+      </div>
 
       <div className="mt-5 flex flex-col gap-3 sm:flex-row">
         <button
-          onClick={onUpload}
-          disabled={isUploading || isDisabled || !file || Boolean(uploadResult)}
+          type="button"
+          onClick={() => onUpload(file ?? getSelectedFileFromInput())}
+          disabled={isUploading || isDisabled || Boolean(uploadResult)}
           className="inline-flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Upload className="size-4" aria-hidden="true" />
@@ -132,6 +172,7 @@ export function UploadPanel({
 
         {(file || uploadResult) && (
           <button
+            type="button"
             onClick={onReset}
             disabled={isUploading || isDisabled}
             className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border bg-transparent px-4 py-2.5 text-sm font-medium text-foreground transition hover:bg-secondary/60 disabled:cursor-not-allowed disabled:opacity-50"
