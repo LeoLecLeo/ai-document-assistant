@@ -112,7 +112,7 @@ export default function Home() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-background">
       <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-[480px] bg-[radial-gradient(60%_100%_at_50%_0%,oklch(0.72_0.13_215/0.12),transparent_70%)]"
+        className="pointer-events-none absolute inset-x-0 top-0 h-120 bg-[radial-gradient(60%_100%_at_50%_0%,oklch(0.72_0.13_215/0.12),transparent_70%)]"
         aria-hidden="true"
       />
 
