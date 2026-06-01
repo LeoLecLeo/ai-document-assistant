@@ -2,7 +2,10 @@ from fastapi import APIRouter, HTTPException
 
 from app.core.config import settings
 from app.schemas.question import QuestionRequest, QuestionResponse, SourceChunk
-from app.services.document_store_service import load_document_data
+from app.services.document_store_service import (
+    increment_document_question_count,
+    load_document_data,
+)
 from app.services.llm_service import generate_answer
 from app.services.vector_store_service import search_similar_chunks
 
@@ -11,8 +14,19 @@ router = APIRouter(prefix="/questions", tags=["Questions"])
 
 @router.post("/ask", response_model=QuestionResponse)
 def ask_question(payload: QuestionRequest):
-    if not payload.question.strip():
-        raise HTTPException(status_code=400, detail="Question cannot be empty.")
+    question = payload.question.strip()
+
+    if not question:
+        raise HTTPException(status_code=400, detail="La question ne peut pas être vide.")
+
+    if len(question) > settings.max_question_characters:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "La question est trop longue. "
+                f"Maximum autorisé : {settings.max_question_characters} caractères."
+            ),
+        )
 
     try:
         load_document_data(
@@ -24,9 +38,15 @@ def ask_question(payload: QuestionRequest):
         raise HTTPException(status_code=404, detail=str(error))
 
     try:
+        increment_document_question_count(
+            document_id=payload.document_id,
+            documents_dir=settings.documents_dir,
+            max_questions=settings.max_questions_per_document,
+        )
+
         relevant_chunks = search_similar_chunks(
             document_id=payload.document_id,
-            question=payload.question,
+            question=question,
             chroma_dir=settings.chroma_dir,
             limit=3,
         )
@@ -43,7 +63,7 @@ def ask_question(payload: QuestionRequest):
             )
 
         answer = generate_answer(
-            question=payload.question,
+            question=question,
             sources=relevant_chunks,
         )
 
@@ -58,5 +78,5 @@ def ask_question(payload: QuestionRequest):
     except Exception:
         raise HTTPException(
             status_code=500,
-            detail="An error occurred while generating the answer.",
+            detail="Une erreur est survenue pendant la génération de la réponse.",
         )

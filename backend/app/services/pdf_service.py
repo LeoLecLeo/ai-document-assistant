@@ -5,9 +5,21 @@ from fastapi import UploadFile
 from pypdf import PdfReader
 
 
-async def save_pdf_file(file: UploadFile, upload_dir: str) -> tuple[str, Path]:
+async def save_pdf_file(
+    file: UploadFile,
+    upload_dir: str,
+    max_file_size_bytes: int,
+) -> tuple[str, Path]:
     if not file.filename or not file.filename.lower().endswith(".pdf"):
-        raise ValueError("Only PDF files are supported.")
+        raise ValueError("Seuls les fichiers PDF sont acceptés.")
+
+    content = await file.read()
+
+    if len(content) > max_file_size_bytes:
+        max_size_mb = max_file_size_bytes // (1024 * 1024)
+        raise ValueError(
+            f"Le fichier est trop volumineux. Taille maximale autorisée : {max_size_mb} Mo."
+        )
 
     document_id = uuid4().hex
     upload_path = Path(upload_dir)
@@ -16,13 +28,22 @@ async def save_pdf_file(file: UploadFile, upload_dir: str) -> tuple[str, Path]:
     stored_filename = f"{document_id}.pdf"
     file_path = upload_path / stored_filename
 
-    content = await file.read()
     file_path.write_bytes(content)
 
     return document_id, file_path
 
-def extract_text_from_pdf(file_path: Path) -> tuple[int, list[str], str]:
+
+def extract_text_from_pdf(
+    file_path: Path,
+    max_pages: int,
+) -> tuple[int, list[str], str]:
     reader = PdfReader(str(file_path))
+    pages_count = len(reader.pages)
+
+    if pages_count > max_pages:
+        raise ValueError(
+            f"Le document contient trop de pages. Maximum autorisé : {max_pages} pages."
+        )
 
     pages_text: list[str] = []
 
@@ -32,4 +53,10 @@ def extract_text_from_pdf(file_path: Path) -> tuple[int, list[str], str]:
 
     full_text = "\n\n".join(pages_text).strip()
 
-    return len(reader.pages), pages_text, full_text
+    if not full_text:
+        raise ValueError(
+            "Aucun texte exploitable n'a été trouvé dans ce PDF. "
+            "Le document est peut-être scanné ou composé uniquement d'images."
+        )
+
+    return pages_count, pages_text, full_text

@@ -18,27 +18,44 @@ router = APIRouter(prefix="/documents", tags=["Documents"])
 @router.post("/upload", response_model=DocumentUploadResponse)
 async def upload_document(file: UploadFile = File(...)):
     try:
-        document_id, file_path = await save_pdf_file(file, settings.upload_dir)
-        pages, pages_text, text = extract_text_from_pdf(file_path)
+        document_id, file_path = await save_pdf_file(
+            file=file,
+            upload_dir=settings.upload_dir,
+            max_file_size_bytes=settings.max_pdf_size_bytes,
+        )
+
+        pages, pages_text, text = extract_text_from_pdf(
+            file_path=file_path,
+            max_pages=settings.max_pdf_pages,
+        )
+
         chunks = chunk_pages(pages_text)
+
+        if len(chunks) > settings.max_chunks_per_document:
+            raise ValueError(
+                "Le document contient trop de texte pour cette démo. "
+                f"Maximum autorisé : {settings.max_chunks_per_document} segments."
+            )
+
+        filename = file.filename or "unknown.pdf"
 
         save_document_chunks(
             document_id=document_id,
-            filename=file.filename or "unknown.pdf",
+            filename=filename,
             chunks=chunks,
             documents_dir=settings.documents_dir,
         )
 
         index_document_chunks(
             document_id=document_id,
-            filename=file.filename or "unknown.pdf",
+            filename=filename,
             chunks=chunks,
             chroma_dir=settings.chroma_dir,
         )
 
         return DocumentUploadResponse(
             document_id=document_id,
-            filename=file.filename or "unknown.pdf",
+            filename=filename,
             stored_filename=Path(file_path).name,
             pages=pages,
             characters=len(text),
@@ -51,9 +68,10 @@ async def upload_document(file: UploadFile = File(...)):
     except Exception:
         raise HTTPException(
             status_code=500,
-            detail="An error occurred while processing the PDF.",
+            detail="Une erreur est survenue pendant le traitement du PDF.",
         )
-    
+
+
 @router.get("/{document_id}", response_model=DocumentDetailsResponse)
 def get_document(document_id: str):
     try:
