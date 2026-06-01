@@ -1,39 +1,33 @@
-# AI Document Assistant — Backend
+# Assistant IA documentaire
 
-Backend FastAPI pour une application d'assistant IA sur documents.
+Application full-stack permettant d’uploader un PDF, de poser une question en langage naturel et d’obtenir une réponse générée par IA à partir des passages pertinents du document.
 
-## Fonctionnalités actuelles
+## Fonctionnalités
 
-- Vérification de santé de l'API avec `GET /health`
-- Upload de PDF avec `POST /documents/upload`
-- Extraction de texte depuis PDF
-- Découpage du texte en chunks
-- Sauvegarde locale des chunks en JSON
-- Récupération d'un document par `GET /documents/{document_id}`
-- Recherche simple de passages pertinents avec `POST /questions/ask`
-- Génération d'embeddings avec OpenAI
-- Indexation des chunks dans Chroma
-- Recherche sémantique par similarité vectorielle
-- Génération de réponses avec un LLM
-- Réponses basées uniquement sur les sources retrouvées
+- Upload de documents PDF
+- Extraction et découpage du texte
+- Recherche sémantique dans le document
+- Génération de réponses avec sources citées
+- Limites d’usage pour protéger la démo
 
 ## Stack
 
-- Python
+### Frontend
+
+- Next.js
+- TypeScript
+- Tailwind CSS
+
+### Backend
+
 - FastAPI
-- Uvicorn
-- pypdf
-- Pydantic
-- python-dotenv
-- pydantic-settings
+- Python
 - OpenAI API
 - ChromaDB
 
 ## Lancer le backend
 
-Depuis le dossier `backend` :
-
-```cmd
-.venv\Scripts\activate
+```bash
+cd backend
 python -m uvicorn app.main:app --reload
 ```
