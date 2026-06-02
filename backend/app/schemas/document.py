@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class DocumentUploadResponse(BaseModel):
@@ -8,6 +8,9 @@ class DocumentUploadResponse(BaseModel):
     pages: int
     characters: int
     chunks: int
+    vision_fallback_used: bool = False
+    vision_pages_analyzed: list[int] = Field(default_factory=list)
+    extraction_quality_warning: str | None = None
 
 
 class DocumentChunkResponse(BaseModel):

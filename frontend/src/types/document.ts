@@ -5,6 +5,9 @@ export type UploadResponse = {
   pages: number;
   characters: number;
   chunks: number;
+  vision_fallback_used?: boolean;
+  vision_pages_analyzed?: number[];
+  extraction_quality_warning?: string | null;
 };
 
 export type Source = {

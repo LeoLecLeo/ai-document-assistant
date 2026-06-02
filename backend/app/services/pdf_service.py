@@ -1,6 +1,8 @@
+import base64
 from pathlib import Path
 from uuid import uuid4
 
+import fitz
 from fastapi import UploadFile
 from pypdf import PdfReader
 
@@ -53,10 +55,37 @@ def extract_text_from_pdf(
 
     full_text = "\n\n".join(pages_text).strip()
 
-    if not full_text:
-        raise ValueError(
-            "Aucun texte exploitable n'a été trouvé dans ce PDF. "
-            "Le document est peut-être scanné ou composé uniquement d'images."
-        )
-
     return pages_count, pages_text, full_text
+
+
+def render_pdf_pages_to_base64_images(
+    file_path: Path,
+    page_numbers: list[int],
+    zoom: float,
+) -> dict[int, str]:
+    if not page_numbers:
+        return {}
+
+    rendered_pages: dict[int, str] = {}
+
+    document = fitz.open(file_path)
+
+    try:
+        matrix = fitz.Matrix(zoom, zoom)
+
+        for page_number in page_numbers:
+            page_index = page_number - 1
+
+            if page_index < 0 or page_index >= len(document):
+                continue
+
+            page = document.load_page(page_index)
+            pixmap = page.get_pixmap(matrix=matrix, alpha=False)
+            png_bytes = pixmap.tobytes("png")
+
+            rendered_pages[page_number] = base64.b64encode(png_bytes).decode("utf-8")
+
+    finally:
+        document.close()
+
+    return rendered_pages

@@ -1,7 +1,15 @@
 "use client";
 
 import { type ChangeEvent, type DragEvent, useRef, useState } from "react";
-import { CheckCircle2, FileText, FileUp, RotateCcw, Upload } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Eye,
+  FileText,
+  FileUp,
+  RotateCcw,
+  Upload,
+} from "lucide-react";
 
 import type { UploadResponse } from "@/types/document";
 
@@ -184,24 +192,76 @@ export function UploadPanel({
       </div>
 
       {uploadResult && (
-        <div className="mt-5 flex items-center gap-3 rounded-xl border border-primary/25 bg-primary/10 p-4">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-primary/15 text-primary">
-            <FileText className="size-4" aria-hidden="true" />
+        <div className="mt-5 space-y-3">
+          <div className="flex items-center gap-3 rounded-xl border border-primary/25 bg-primary/10 p-4">
+            <div className="flex size-9 items-center justify-center rounded-lg bg-primary/15 text-primary">
+              <FileText className="size-4" aria-hidden="true" />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-foreground">
+                {uploadResult.filename}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {uploadResult.pages} pages · {uploadResult.chunks} segments
+                prêts
+              </p>
+            </div>
+
+            <span className="flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+              <CheckCircle2 className="size-3.5" aria-hidden="true" />
+              Prêt
+            </span>
           </div>
 
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-foreground">
-              {uploadResult.filename}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {uploadResult.pages} pages · {uploadResult.chunks} segments prêts
-            </p>
-          </div>
+          {uploadResult.vision_fallback_used && (
+            <div className="rounded-xl border border-primary/25 bg-primary/10 p-4 text-sm leading-relaxed text-muted-foreground">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                  <Eye className="size-4" aria-hidden="true" />
+                </div>
 
-          <span className="flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-            <CheckCircle2 className="size-3.5" aria-hidden="true" />
-            Prêt
-          </span>
+                <div>
+                  <p className="font-medium text-foreground">
+                    Analyse visuelle utilisée
+                  </p>
+                  <p className="mt-1">
+                    Certaines pages étaient difficiles à lire automatiquement.
+                    Une analyse visuelle a été utilisée pour enrichir le contenu
+                    du document.
+                  </p>
+
+                  {uploadResult.vision_pages_analyzed &&
+                    uploadResult.vision_pages_analyzed.length > 0 && (
+                      <p className="mt-2 text-xs">
+                        Pages analysées visuellement :{" "}
+                        {uploadResult.vision_pages_analyzed.join(", ")}
+                      </p>
+                    )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!uploadResult.vision_fallback_used &&
+            uploadResult.extraction_quality_warning && (
+              <div className="rounded-xl border border-yellow-500/25 bg-yellow-500/10 p-4 text-sm leading-relaxed text-yellow-100/80">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-yellow-500/15 text-yellow-100">
+                    <AlertTriangle className="size-4" aria-hidden="true" />
+                  </div>
+
+                  <div>
+                    <p className="font-medium text-yellow-100">
+                      Extraction partielle détectée
+                    </p>
+                    <p className="mt-1">
+                      {uploadResult.extraction_quality_warning}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
         </div>
       )}
     </section>
