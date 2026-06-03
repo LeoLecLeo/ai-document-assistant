@@ -11,7 +11,17 @@ import {
   Upload,
 } from "lucide-react";
 
+import { LoadingButton } from "@/components/LoadingButton";
 import type { UploadResponse } from "@/types/document";
+
+const UPLOAD_LOADING_MESSAGES = [
+  "Préparation...",
+  "Extraction du texte...",
+  "Contrôle qualité...",
+  "Indexation...",
+  "Indexation...",
+  "Traitement avancé...",
+] as const;
 
 type UploadPanelProps = {
   file: File | null;
@@ -168,15 +178,17 @@ export function UploadPanel({
       </div>
 
       <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-        <button
+        <LoadingButton
           type="button"
           onClick={() => onUpload(file ?? getSelectedFileFromInput())}
-          disabled={isUploading || isDisabled || Boolean(uploadResult)}
+          disabled={isDisabled || Boolean(uploadResult)}
+          loading={isUploading}
+          loadingMessages={UPLOAD_LOADING_MESSAGES}
           className="inline-flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Upload className="size-4" aria-hidden="true" />
-          {isUploading ? "Analyse en cours..." : "Uploader et indexer"}
-        </button>
+          Uploader et indexer
+        </LoadingButton>
 
         {(file || uploadResult) && (
           <button

@@ -1,6 +1,8 @@
 "use client";
 
-import { Lock, MessageCircleQuestion, Send, Sparkles } from "lucide-react";
+import { Lock, MessageCircleQuestion, Send } from "lucide-react";
+
+import { LoadingButton } from "@/components/LoadingButton";
 
 type QuestionPanelProps = {
   question: string;
@@ -79,23 +81,17 @@ export function QuestionPanel({
         ))}
       </div>
 
-      <button
+      <LoadingButton
+        type="button"
         onClick={onAsk}
-        disabled={isAsking || isDisabled || !canAsk || !question.trim()}
+        disabled={isDisabled || !canAsk || !question.trim()}
+        loading={isAsking}
+        loadingText="Génération en cours"
         className="mt-4 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {isAsking ? (
-          <>
-            <Sparkles className="size-4 animate-pulse" aria-hidden="true" />
-            Génération en cours...
-          </>
-        ) : (
-          <>
-            <Send className="size-4" aria-hidden="true" />
-            Obtenir une réponse
-          </>
-        )}
-      </button>
+        <Send className="size-4" aria-hidden="true" />
+        Obtenir une réponse
+      </LoadingButton>
     </section>
   );
 }

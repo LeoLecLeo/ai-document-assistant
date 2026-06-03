@@ -77,3 +77,24 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes button-shimmer {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(360%);
+  }
+}
+
+.animate-button-shimmer {
+  animation: button-shimmer 1.9s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-button-shimmer {
+    animation: none;
+    opacity: 0;
+  }
+}
