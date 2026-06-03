@@ -170,16 +170,16 @@ export default function Home() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-background">
+    <main className="relative min-h-screen overflow-x-hidden bg-background">
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-120 bg-[radial-gradient(60%_100%_at_50%_0%,oklch(0.72_0.13_215/0.12),transparent_70%)]"
         aria-hidden="true"
       />
 
-      <div className="relative mx-auto w-full max-w-5xl px-6 py-16 sm:py-24">
+      <div className="relative mx-auto w-full max-w-5xl overflow-x-hidden px-4 py-16 sm:px-6 sm:py-24">
         <PageHeader />
 
-        <div className="mt-14 grid gap-6 lg:grid-cols-2">
+        <div className="mt-14 grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-2">
           <UploadPanel
             file={file}
             uploadResult={uploadResult}
@@ -201,15 +201,15 @@ export default function Home() {
           />
         </div>
 
-        <div className="mt-8">
+        <div className="mt-8 min-w-0">
           <ErrorMessage message={error} />
         </div>
 
-        <div className="mt-8">
+        <div className="mt-8 min-w-0">
           <AnswerPanel answer={answer} isLoading={isAsking} />
         </div>
 
-        <div className="mt-12">
+        <div className="mt-12 min-w-0">
           <SourcesList sources={sources} />
         </div>
       </div>
