@@ -17,9 +17,45 @@ async function getErrorMessage(response: Response, fallbackMessage: string) {
 }
 
 function getNetworkErrorMessage() {
-  return (
-    "Impossible de contacter le backend. Vérifie que le serveur FastAPI est bien lancé sur http://127.0.0.1:8000."
-  );
+  return "Impossible de contacter le backend. Vérifie que le serveur FastAPI est bien lancé sur http://127.0.0.1:8000.";
+}
+
+function isValidDocumentId(
+  documentId: string | null | undefined
+): documentId is string {
+  return typeof documentId === "string" && documentId.length > 0;
+}
+
+export function getDocumentCleanupUrl(
+  documentId: string | null | undefined
+): string {
+  if (!isValidDocumentId(documentId)) {
+    throw new Error("Aucun document à nettoyer.");
+  }
+
+  return `${API_URL}/documents/${encodeURIComponent(documentId)}/cleanup`;
+}
+
+export async function cleanupDocument(
+  documentId: string | null | undefined
+): Promise<void> {
+  if (!isValidDocumentId(documentId)) {
+    return;
+  }
+
+  try {
+    const response = await fetch(getDocumentCleanupUrl(documentId), {
+      method: "POST",
+      keepalive: true,
+    });
+
+    if (!response.ok && response.status !== 404) {
+      throw new Error("Erreur pendant le nettoyage du document.");
+    }
+  } catch {
+    // Nettoyage best-effort côté navigateur.
+    // Le backend garde aussi une suppression automatique par expiration.
+  }
 }
 
 export async function uploadDocument(file: File): Promise<UploadResponse> {
@@ -52,9 +88,13 @@ export async function uploadDocument(file: File): Promise<UploadResponse> {
 }
 
 export async function askQuestion(
-  documentId: string,
+  documentId: string | null | undefined,
   question: string
 ): Promise<AskResponse> {
+  if (!isValidDocumentId(documentId)) {
+    throw new Error("Upload d'abord un PDF.");
+  }
+
   try {
     const response = await fetch(`${API_URL}/questions/ask`, {
       method: "POST",

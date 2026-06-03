@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     chroma_dir: str = "storage/chroma"
     documents_dir: str = "storage/documents"
 
+    document_retention_minutes: int = 60
+    cleanup_interval_minutes: int = 10
+
     openai_api_key: str = ""
     embedding_model: str = "text-embedding-3-small"
     llm_model: str = "gpt-4.1-mini"

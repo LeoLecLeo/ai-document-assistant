@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { AnswerPanel } from "@/components/AnswerPanel";
 import { ErrorMessage } from "@/components/ErrorMessage";
@@ -8,8 +8,19 @@ import { PageHeader } from "@/components/PageHeader";
 import { QuestionPanel } from "@/components/QuestionPanel";
 import { SourcesList } from "@/components/SourcesList";
 import { UploadPanel } from "@/components/UploadPanel";
-import { askQuestion, uploadDocument } from "@/lib/api";
+import {
+  askQuestion,
+  cleanupDocument,
+  getDocumentCleanupUrl,
+  uploadDocument,
+} from "@/lib/api";
 import type { Source, UploadResponse } from "@/types/document";
+
+function isValidDocumentId(
+  documentId: string | null | undefined
+): documentId is string {
+  return typeof documentId === "string" && documentId.length > 0;
+}
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
@@ -23,7 +34,48 @@ export default function Home() {
   const [isUploading, setIsUploading] = useState(false);
   const [isAsking, setIsAsking] = useState(false);
 
+  const currentDocumentId = uploadResult?.document_id ?? null;
+
+  function requestDocumentCleanup(documentId: string | null | undefined) {
+    if (!isValidDocumentId(documentId)) {
+      return;
+    }
+
+    void cleanupDocument(documentId);
+  }
+
+  useEffect(() => {
+    const documentId = currentDocumentId;
+
+    if (!isValidDocumentId(documentId)) {
+      return;
+    }
+
+    function handlePageHide() {
+      const cleanupUrl = getDocumentCleanupUrl(documentId);
+
+      const beaconWasQueued = navigator.sendBeacon?.(cleanupUrl);
+
+      if (beaconWasQueued) {
+        return;
+      }
+
+      void fetch(cleanupUrl, {
+        method: "POST",
+        keepalive: true,
+      });
+    }
+
+    window.addEventListener("pagehide", handlePageHide);
+
+    return () => {
+      window.removeEventListener("pagehide", handlePageHide);
+    };
+  }, [currentDocumentId]);
+
   function handleFileChange(nextFile: File | null) {
+    requestDocumentCleanup(currentDocumentId);
+
     setFile(nextFile);
     setUploadResult(null);
     setQuestion("");
@@ -33,6 +85,8 @@ export default function Home() {
   }
 
   function handleReset() {
+    requestDocumentCleanup(currentDocumentId);
+
     setFile(null);
     setFileInputKey((currentKey) => currentKey + 1);
     setUploadResult(null);
@@ -54,10 +108,14 @@ export default function Home() {
       return;
     }
 
+    requestDocumentCleanup(currentDocumentId);
+
     setFile(fileToUpload);
-    setError("");
+    setUploadResult(null);
+    setQuestion("");
     setAnswer("");
     setSources([]);
+    setError("");
     setIsUploading(true);
 
     try {
@@ -79,7 +137,9 @@ export default function Home() {
       return;
     }
 
-    if (!uploadResult?.document_id) {
+    const documentId = uploadResult?.document_id;
+
+    if (!isValidDocumentId(documentId)) {
       setError("Upload d'abord un PDF.");
       return;
     }
@@ -95,7 +155,7 @@ export default function Home() {
     setIsAsking(true);
 
     try {
-      const data = await askQuestion(uploadResult.document_id, question);
+      const data = await askQuestion(documentId, question);
       setAnswer(data.answer);
       setSources(data.sources);
     } catch (error) {
@@ -135,7 +195,7 @@ export default function Home() {
             question={question}
             isAsking={isAsking}
             isDisabled={isUploading}
-            canAsk={Boolean(uploadResult?.document_id)}
+            canAsk={isValidDocumentId(currentDocumentId)}
             onQuestionChange={setQuestion}
             onAsk={handleAsk}
           />

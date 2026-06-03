@@ -91,3 +91,10 @@ def search_similar_chunks(
         )
 
     return chunks
+
+def delete_document_chunks(
+    document_id: str,
+    chroma_dir: str,
+) -> None:
+    collection = get_chunks_collection(chroma_dir)
+    collection.delete(where={"document_id": document_id})

@@ -27,6 +27,10 @@ export function QuestionPanel({
   onQuestionChange,
   onAsk,
 }: QuestionPanelProps) {
+  const textareaDisabled = !canAsk || isAsking || isDisabled;
+  const suggestionDisabled = !canAsk || isAsking || isDisabled;
+  const askButtonDisabled = isDisabled || !canAsk || !question.trim();
+
   return (
     <section className="flex h-full flex-col rounded-2xl border border-border/80 bg-card/60 p-6 shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_24px_48px_-24px_rgba(0,0,0,0.6)] backdrop-blur-sm">
       <div className="mb-5 flex items-center gap-3">
@@ -47,7 +51,7 @@ export function QuestionPanel({
       <div className="relative flex-1">
         <textarea
           value={question}
-          disabled={!canAsk || isAsking || isDisabled}
+          disabled={textareaDisabled}
           onChange={(event) => onQuestionChange(event.target.value)}
           placeholder={
             canAsk
@@ -72,7 +76,7 @@ export function QuestionPanel({
           <button
             key={suggestion}
             type="button"
-            disabled={!canAsk || isAsking || isDisabled}
+            disabled={suggestionDisabled}
             onClick={() => onQuestionChange(suggestion)}
             className="cursor-pointer rounded-full border border-border bg-secondary/40 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -84,7 +88,7 @@ export function QuestionPanel({
       <LoadingButton
         type="button"
         onClick={onAsk}
-        disabled={isDisabled || !canAsk || !question.trim()}
+        disabled={askButtonDisabled}
         loading={isAsking}
         loadingText="Génération en cours"
         className="mt-4 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"

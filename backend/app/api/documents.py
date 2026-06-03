@@ -1,6 +1,7 @@
+from contextlib import suppress
 from pathlib import Path
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, File, HTTPException, UploadFile, status
 
 from app.core.config import settings
 from app.schemas.document import DocumentDetailsResponse, DocumentUploadResponse
@@ -15,6 +16,7 @@ from app.services.pdf_service import (
     render_pdf_pages_to_base64_images,
     save_pdf_file,
 )
+from app.services.storage_cleanup_service import delete_document_data
 from app.services.vector_store_service import index_document_chunks
 from app.services.vision_service import describe_pdf_pages_with_vision
 
@@ -23,6 +25,10 @@ router = APIRouter(prefix="/documents", tags=["Documents"])
 
 @router.post("/upload", response_model=DocumentUploadResponse)
 async def upload_document(file: UploadFile = File(...)):
+    document_id: str | None = None
+    file_path: Path | None = None
+    upload_completed = False
+
     try:
         document_id, file_path = await save_pdf_file(
             file=file,
@@ -124,7 +130,7 @@ async def upload_document(file: UploadFile = File(...)):
             chroma_dir=settings.chroma_dir,
         )
 
-        return DocumentUploadResponse(
+        response = DocumentUploadResponse(
             document_id=document_id,
             filename=filename,
             stored_filename=Path(file_path).name,
@@ -136,14 +142,49 @@ async def upload_document(file: UploadFile = File(...)):
             extraction_quality_warning=extraction_quality_warning,
         )
 
+        upload_completed = True
+
+        return response
+
     except ValueError as error:
+        if document_id is not None and not upload_completed:
+            delete_document_data(
+                document_id=document_id,
+                upload_dir=settings.upload_dir,
+                documents_dir=settings.documents_dir,
+                chroma_dir=settings.chroma_dir,
+            )
+
         raise HTTPException(status_code=400, detail=str(error))
 
     except Exception:
+        if document_id is not None and not upload_completed:
+            delete_document_data(
+                document_id=document_id,
+                upload_dir=settings.upload_dir,
+                documents_dir=settings.documents_dir,
+                chroma_dir=settings.chroma_dir,
+            )
+
         raise HTTPException(
             status_code=500,
             detail="Une erreur est survenue pendant le traitement du PDF.",
         )
+
+    finally:
+        if file_path is not None:
+            with suppress(FileNotFoundError):
+                file_path.unlink()
+
+
+@router.post("/{document_id}/cleanup", status_code=status.HTTP_204_NO_CONTENT)
+def cleanup_document(document_id: str):
+    delete_document_data(
+        document_id=document_id,
+        upload_dir=settings.upload_dir,
+        documents_dir=settings.documents_dir,
+        chroma_dir=settings.chroma_dir,
+    )
 
 
 @router.get("/{document_id}", response_model=DocumentDetailsResponse)
