@@ -1,3 +1,4 @@
+import logging
 from contextlib import suppress
 from pathlib import Path
 
@@ -22,6 +23,8 @@ from app.services.vision_service import describe_pdf_pages_with_vision
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
+logger = logging.getLogger(__name__)
+
 
 @router.post("/upload", response_model=DocumentUploadResponse)
 async def upload_document(file: UploadFile = File(...)):
@@ -36,9 +39,18 @@ async def upload_document(file: UploadFile = File(...)):
             max_file_size_bytes=settings.max_pdf_size_bytes,
         )
 
+        logger.info("PDF sauvegardé temporairement : document_id=%s", document_id)
+
         pages, pages_text, text = extract_text_from_pdf(
             file_path=file_path,
             max_pages=settings.max_pdf_pages,
+        )
+
+        logger.info(
+            "Extraction texte terminée : document_id=%s pages=%s characters=%s",
+            document_id,
+            pages,
+            len(text),
         )
 
         quality_report = evaluate_extraction_quality(
@@ -60,6 +72,12 @@ async def upload_document(file: UploadFile = File(...)):
             and quality_report.pages_to_analyze
         ):
             try:
+                logger.info(
+                    "Analyse visuelle demandée : document_id=%s pages=%s",
+                    document_id,
+                    quality_report.pages_to_analyze,
+                )
+
                 rendered_pages = render_pdf_pages_to_base64_images(
                     file_path=file_path,
                     page_numbers=quality_report.pages_to_analyze,
@@ -85,7 +103,18 @@ async def upload_document(file: UploadFile = File(...)):
                 vision_fallback_used = bool(vision_descriptions)
                 vision_pages_analyzed = sorted(vision_descriptions.keys())
 
+                logger.info(
+                    "Analyse visuelle terminée : document_id=%s pages=%s",
+                    document_id,
+                    vision_pages_analyzed,
+                )
+
             except Exception:
+                logger.exception(
+                    "Erreur pendant l'analyse visuelle : document_id=%s",
+                    document_id,
+                )
+
                 extraction_quality_warning = (
                     "L'extraction du PDF semble partielle, mais l'analyse visuelle "
                     "automatique n'a pas pu être réalisée."
@@ -108,6 +137,12 @@ async def upload_document(file: UploadFile = File(...)):
 
         chunks = chunk_pages(pages_text)
 
+        logger.info(
+            "Chunking terminé : document_id=%s chunks=%s",
+            document_id,
+            len(chunks),
+        )
+
         if len(chunks) > settings.max_chunks_per_document:
             raise ValueError(
                 "Le document contient trop de texte pour cette démo. "
@@ -123,12 +158,16 @@ async def upload_document(file: UploadFile = File(...)):
             documents_dir=settings.documents_dir,
         )
 
+        logger.info("Chunks sauvegardés : document_id=%s", document_id)
+
         index_document_chunks(
             document_id=document_id,
             filename=filename,
             chunks=chunks,
             chroma_dir=settings.chroma_dir,
         )
+
+        logger.info("Indexation vectorielle terminée : document_id=%s", document_id)
 
         response = DocumentUploadResponse(
             document_id=document_id,
@@ -147,6 +186,12 @@ async def upload_document(file: UploadFile = File(...)):
         return response
 
     except ValueError as error:
+        logger.warning(
+            "Erreur utilisateur pendant le traitement du PDF : document_id=%s error=%s",
+            document_id,
+            error,
+        )
+
         if document_id is not None and not upload_completed:
             delete_document_data(
                 document_id=document_id,
@@ -158,6 +203,11 @@ async def upload_document(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail=str(error))
 
     except Exception:
+        logger.exception(
+            "Erreur inattendue pendant le traitement du PDF : document_id=%s",
+            document_id,
+        )
+
         if document_id is not None and not upload_completed:
             delete_document_data(
                 document_id=document_id,
