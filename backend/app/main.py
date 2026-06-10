@@ -57,6 +57,7 @@ app.add_middleware(
         "http://127.0.0.1:3001",
         "https://portfolio-bay-five-70.vercel.app",
         "https://ai-document-assistant-two.vercel.app",
+        "https://ai-document-assistant.leolecuyer.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],
